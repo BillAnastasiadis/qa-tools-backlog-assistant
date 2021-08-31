@@ -1,8 +1,6 @@
 ---
 name: Backlog Limits Checker
-on:
-  schedule:
-  - cron: '*/10 * * * *'
+on: [push, pull_request]
 
 jobs:
   check_suse_qa_tools_backlog_limits:
@@ -61,6 +59,20 @@ jobs:
         env:
           key: ${{ secrets.REDMINE_API_KEY }}
           fun: "gha_untriaged_qa"
+      - name: check for changes
+        if: always()
+        run: |
+          python backlog_checker.py
+        env:
+          fun: "util_check_for_changes"
+      - name: send message
+        if: steps.checkForChanges.outcome == 'failure'
+        uses: s3krit/matrix-message-action@v0.0.3
+        with:
+          room_id: ${{ secrets.MATRIX_ROOM_ID }}
+          access_token: ${{ secrets.MATRIX_ACCESS_TOKEN }}
+          message: "Hello, world"
+          server: "matrix.org"
       - name: Commit files
         if: always()
         run: |

@@ -33,6 +33,29 @@ def results_to_md(item, number, limits, status):
         md.write("| " + item + " | " + number + " | " + limits + " | " + status + "\n")
 
 
+# Check for changes from previous results
+def util_check_for_changes():
+    try:
+        with open("index.md", "r") as curr, open("README.md", "a") as prev:
+            curr_lines = curr.getlines()
+            prev_lines = prev.getlines()
+            if len(curr_lines) != len(prev_lines):
+                exit(0)
+            for cline, pline in zip(curr_lines, prev_lines):
+                if any(map(cline.__contains__, list(result_icons.values()))):
+                    if ((result_icons['pass'] in cline and result_icons[
+                        'pass'] in pline) or
+                            (result_icons['fail'] in cline and result_icons[
+                                'fail'] in pline)):
+                        exit(0)
+                    else:
+                        if any(map(pline.__contains__, list(result_icons.values()))):
+                            exit(1)
+                        exit(0)
+    except Exception:
+        exit(0)
+
+
 # Overall backlog length check
 def gha_overall():
     key = os.environ['key']
@@ -81,7 +104,7 @@ def gha_workable():
 # Issues exceeding due date
 def gha_exceed_due_date():
     key = os.environ['key']
-    today = str(datetime.today().strftime('%Y-%m-%d'))
+    today = "2021-08-29"
     answer = requests.get("https://progress.opensuse.org/issues.json?fixed_version_id=418"
                           + "&status_id=!3|5|6&due_date=%3C%3D" + today + "&key=" + key)
     root = json.loads(answer.content)
@@ -170,6 +193,9 @@ def gha_untriaged_tools():
 
 functions = {name: obj for name, obj in getmembers(sys.modules[__name__]) if (isfunction(
     obj) and name.startswith("gha"))}
+functions = dict(functions,
+                 **{name: obj for name, obj in getmembers(sys.modules[__name__]) if
+                    (isfunction(obj) and name.startswith("util"))})
 if "fun" not in os.environ:
     initialize_md()
 else:
